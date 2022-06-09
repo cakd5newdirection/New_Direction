@@ -60,9 +60,11 @@
 
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=da476ec27af7d520225998a85c8ea40a"></script>
     <script>
+        // 차량별 제원
         car_able = 350
         mid_able = 300
         small_able = 250
+        // cctv별 가용 도로폭 계산 함수 실행
         function able_cal1(distance){
             // sleep(1000)
             name = "1-sample_cctv.mp4"
@@ -103,6 +105,7 @@
         });
         // return able_length4
         }
+        //cctv별 통행 불가 시간을 측정
         function d_time1() {
             var now = new Date().getTime();
             distance = Math.round((now-countdowntime)/1000);
@@ -198,7 +201,7 @@
             console.log(length)
             return length
         }
-        
+        // cctv 영상을 팝업 형태로 출력
         function popup_video(data) { 
             winW=500; 
             winH=650; 

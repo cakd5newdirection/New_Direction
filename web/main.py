@@ -8,8 +8,8 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
-model = torch.hub.load('ultralytics/yolov5', 'yolov5l')  # or yolov5n - yolov5x6, custom
-model2 = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', autoshape=True)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5l')  # 미리 학습된 COCO based weight 모델 사용
+model2 = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', autoshape=True) # warping 후 왜곡된 차량에 대해 학습한 weight 모델 사용
 
 threshold = 0.1
 line_width = 15
@@ -27,7 +27,7 @@ w4_mid = []
 w4_mid2 = []
 w4_mid3 = []
 
-
+# 탐지된 객체의 중심점 정보를 반환
 def mid_convert(mid,mid2,mid3,df,threshold):
     if mid2 == []:
         for i in range(len(df)):
@@ -56,7 +56,7 @@ def mid_convert(mid,mid2,mid3,df,threshold):
             mid2.append([xmid,ymid,confidence])
         mid2.sort()
         mid3 = []
-        
+        # 이전 프레임과 현재 프레임의 중심점을 비교하여 움직이고 있는지 판단
         for middle in mid:
             for middle2 in mid2:
                 # mid_x , mid_y ,_ = middle
@@ -82,12 +82,14 @@ def home():
 @app.route("/get")
 def able_cal():
     global cap,threshold,line_width,line_pixel,w1_mid,w1_mid2,w1_mid3,able_length,w2_mid,w2_mid2,w2_mid3,w3_mid,w3_mid2,w3_mid3,w4_mid,w4_mid2,w4_mid3
+    # 영상 데이터 load
     path = '../web/static'
     file_name = request.args.get('file_name').strip()
     print(file_name)
     filePath = os.path.join(path, file_name)
     cap = cv2.VideoCapture(filePath)
     frame_num = float(request.args.get('dst').strip())
+    # cctv에 대한 사전 정보 load
     cctv_num = int(file_name[0])
     cctv_pre = pd.read_csv('../cctv_pre.csv',index_col=0,encoding='cp949')
     coor_df = cctv_pre[cctv_pre.cctv_num == cctv_num]
@@ -99,8 +101,7 @@ def able_cal():
     cap.set(cv2.CAP_PROP_POS_FRAMES, (frame_num)*30)
     
     retval, frame = cap.read()
-    
-        # src = cv2.imread(frame, cv2.IMREAD_COLOR) 
+    # 사전에 저장된 warping 좌표를 load
     topLeft = [coor_df.topLeft_x.values[0] , coor_df.topLeft_y.values[0]]
     topRight = [coor_df.topRight_x.values[0] , coor_df.topRight_y.values[0]] 
     bottomRight = [coor_df.bottomRight_x.values[0] , coor_df.bottomRight_y.values[0]] 
@@ -110,19 +111,17 @@ def able_cal():
     pts1 = np.float32([topLeft, topRight, bottomRight, bottomLeft])
     # print(pts1)
 
-    # 변환 후 영상에 사용할 서류의 폭과 높이 계산
+    # 변환 후 영상에 사용할 차량의 폭과 높이 계산
     w1 = abs(bottomRight[0] - bottomLeft[0])
     w2 = abs(topRight[0] - topLeft[0])
     h1 = abs(topRight[1] - bottomRight[1])
     h2 = abs(topLeft[1] - bottomLeft[1])
-    width = int(max([w1, w2])) # 두 좌우 거리간의 최대값이 서류의 폭
-    height = int(max([h1, h2])*1.5)  # 두 상하 거리간의 최대값이 서류의 높이
+    width = int(max([w1, w2])) # 두 좌우 거리간의 최대값이 차량의 폭
+    height = int(max([h1, h2])*1.5)  # 두 상하 거리간의 최대값이 차량의 높이
 
     # 변환 후 4개 좌표
     pts2 = np.float32([[0, 0], [width - 1, 0],
                         [width - 1, height - 1], [0, height - 1]])
-    # print(pts2)
-    # print(width,height)
 
     # 변환 행렬 계산 
     mtrx = cv2.getPerspectiveTransform(pts1, pts2)
@@ -136,11 +135,15 @@ def able_cal():
     results = model2(result)
     # Results
     results.save()
-    results.pandas().xyxy[0]  # or .show(), .save(), .crop(), .pandas(), etc.
+    results.pandas().xyxy[0]
     df = results.pandas().xyxy[0]
     df = df.reset_index(drop=True)
+
+    # CCTV 번호 별로 처리
     if cctv_num == 1:
+        # 중심점 좌표 및 이동여부 갱신
         w1_mid, w1_mid2, w1_mid3 = mid_convert(w1_mid, w1_mid2, w1_mid3,df,threshold)
+        # 이동하지 않은 차량을 통해 도로 폭 계산
         if w1_mid3 != []:
             left = []
             right = []
@@ -158,6 +161,7 @@ def able_cal():
                     right.append(df.loc[df['xmid']==i].values.tolist()[0])
                 else:
                     left.append(df.loc[df['xmid']==i].values.tolist()[0])
+            # 감지된 차량으로부터 최소의 픽셀 길이를 측정
             if (left != [])&(right != []):
                 for i in left:
                     for j in right:
