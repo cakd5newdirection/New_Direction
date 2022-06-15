@@ -1,0 +1,460 @@
+<html lang="en">
+<head>
+    <style>
+        .container {
+            display: grid;
+            grid-template-columns: 440px 1.2fr 9px 0.85fr 9px 0.9fr 15px;
+            grid-template-rows: auto 20px auto 50px;
+            align-items: end;
+            border : 5px double #1a1b1a;
+        }
+        .item:nth-child(1) {
+            text-indent: 20;
+        }
+        .item:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            flex-direction: column; 
+            flex-basis: 10;
+            justify-content: flex-end;
+        }
+        .item:nth-child(3) {
+            grid-column: 4;
+            grid-row: 1;
+        }
+        .item:nth-child(4) {
+            grid-column: 6;
+            grid-row: 1;
+        }
+        .item:nth-child(5) {
+            grid-column: 1 / 8;
+            grid-row: 3 / 4;
+            justify-self: center;
+        }
+        .label {margin-bottom: 96px;}
+        .label * {display: inline-block;vertical-align: top;}
+        .label .left {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_l.png") no-repeat;display: inline-block;height: 24px;overflow: hidden;vertical-align: top;width: 7px;}
+        .label .center {background: url(https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_bg.png) repeat-x;display: inline-block;height: 24px;font-size: 12px;line-height: 24px;}
+        .label .right {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_r.png") -1px 0  no-repeat;display: inline-block;height: 24px;overflow: hidden;width: 6px;}
+        .customoverlay {position:relative;bottom:85px;border-radius:6px;border: 1px solid #ccc;border-bottom:2px solid #ddd;float:left;}
+        .customoverlay:nth-of-type(n) {border:0; box-shadow:0px 1px 2px #888;}
+        .customoverlay a {
+            display:block;
+            text-decoration:none;
+            color:#000;
+            text-align:center;
+            border-radius:6px;
+            font-size:14px;
+            font-weight:bold;
+            overflow:hidden;
+            background: #d95050;
+            background: #d95050 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center;}
+        .customoverlay .title {display:block;text-align:center;background:#fff;margin-right:35px;padding:10px 15px;font-size:14px;font-weight:bold;}
+        .customoverlay:after {content:'';position:absolute;margin-left:-12px;left:50%;bottom:-12px;width:22px;height:12px;background:url('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/vertex_white.png')}
+    </style>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>document</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js">
+    </script>
+    <script>
+        countdowntime = new Date().getTime();
+    </script>
+</head>
+<body style="width: 1200px;">
+    <div class = "container">
+        <h1 class = "item" id = "cctv_total_num">  총 감시 CCTV 대수 : 4대</h1>
+        <div class = "item">
+            <h3 style="background-color: #eeec70; margin-block-end: 0; margin-block-start: 0;"  id = "big_disable"></h3>
+            <h4 style="background-color: #eeec70; margin-block-end: 0; margin-block-start: 0;"  id = "big_disable_ex">소중형 구급차, 소중형 소방차 통행가능</h4>
+        </div>
+        <div class = "item">
+            <h3 style="background-color: #dca27b; margin-block-end: 0; margin-block-start: 0;" id = "middle_disable"></h3>
+            <h4 style="background-color: #dca27b; margin-block-end: 0; margin-block-start: 0;" id = "middle_disable_ex">소중형 구급차 통행가능</h4>
+        </div>  
+        <div class = "item">   
+            <h3 style="background-color: #ce6464; margin-block-end: 0; margin-block-start: 0;" id = "small_disable"></h3>
+            <h4 style="background-color: #ce6464; margin-block-end: 0; margin-block-start: 0;" id = "small_disable_ex">모든 긴급차량 통행불가</h4>
+        </div>    
+        <div class = "item" id="map" style="width:1000px;height:700px;"></div>
+    </div>
+    
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=b8e7ccb18143701e223acecb317ee696"></script>
+    <script>
+        car_able = 350
+        mid_able = 300
+        small_able = 250
+        cctv_1_adress = "대덕구_오정동_홍도로_73번길_740-23#2"
+        cctv_2_adress = "동구_가양동_629_동대전로_256번길_흥룡초교_후문-2"
+        cctv_3_adress = "서구_괴정로90번길_42_스마트빌_앞"
+        cctv_4_adress = "서구_정림동_638_정림로24번길_정림초교_1-2"
+        function able_cal1(distance){
+            name = "1-sample_cctv.mp4"
+            $.get("/get", { dst: distance, file_name : name }).done(function (data) {
+            able_length1 = data;
+        });
+        }
+        function able_cal2(distance){
+            name = "2-sample_cctv.mp4"
+            $.get("/get", { dst: distance, file_name : name }).done(function (data) {
+            able_length2 = data;
+        });
+        }
+        function able_cal3(distance){
+            name = "3-sample_cctv.mp4"
+            $.get("/get", { dst: distance, file_name : name }).done(function (data) {
+            able_length3 = data;
+        });
+        }
+        function able_cal4(distance){
+            name = "4-sample_cctv.mp4"
+            $.get("/get", { dst: distance, file_name : name }).done(function (data) {
+            able_length4 = data;
+        });
+        }
+        function able_by_time1() {
+            var now = new Date().getTime();
+            distance = Math.round((now-countdowntime)/1000);
+            length1 = able_cal1(distance);
+            length_f1 = Number(length1);    //문자를 정수&실수형 숫자로 변환해줌
+        }
+        function able_by_time2() {
+            var now = new Date().getTime();
+            distance = Math.round((now-countdowntime)/1000);
+            length2 = able_cal2(distance);
+            length_f2 = Number(length2);    //문자를 정수&실수형 숫자로 변환해줌
+        }
+        function able_by_time3() {
+            var now = new Date().getTime();
+            distance = Math.round((now-countdowntime)/1000);
+            length3 = able_cal3(distance);
+            length_f3 = Number(length3);    //문자를 정수&실수형 숫자로 변환해줌
+        }
+        function able_by_time4() {
+            var now = new Date().getTime();
+            distance = Math.round((now-countdowntime)/1000);
+            length4 = able_cal4(distance);
+            length_f4 = Number(length4);    //문자를 정수&실수형 숫자로 변환해줌
+        }
+        
+        function popup_video(data , adress) { 
+            winW=600; 
+            winH=400; 
+            vodW=400; 
+            vodH=300; 
+            size= "width="+ winW +",height=" + winH; 
+            path= "static/"+data
+            popup = window.open("","name",size);
+
+            popup.document.open(); 
+            popup.document.write("<html><head>"); 
+            popup.document.write("<title>"+adress+"</title>"); 
+            popup.document.write("</head><body oncontextmenu='return false' onselectstart='return false' ondragstart='return false'>");
+            popup.document.write("<h2>"+adress+"</h2>");  
+            popup.document.write("<center><video src='"+path+"#t="+distance+"'autoplay muted width='"+vodW+" 'height='"+vodH+"'></video>"); 
+            popup.document.write("</center>"); 
+            popup.document.write("</body></html>"); 
+            popup.document.close();
+        }
+        
+
+        function get(selector, root = document) {
+            return root.querySelector(selector);
+        }
+        
+        var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
+            mapOption = { 
+                center: new kakao.maps.LatLng(36.336020, 127.411106), // 지도의 중심좌표
+                level: 7 // 지도의 확대 레벨
+            };
+        
+        var map = new kakao.maps.Map(mapContainer, mapOption);
+        
+        var imageSrc_green = 'static/markers/001.png', // 마커이미지의 주소입니다    
+            imageSrc_red = 'static/markers/002.png', // 마커이미지의 주소입니다    
+            imageSrc_orange = 'static/markers/004.png', // 마커이미지의 주소입니다    
+            imageSrc_yellow = 'static/markers/003.png', // 마커이미지의 주소입니다    
+            imageSize = new kakao.maps.Size(64, 69), // 마커이미지의 크기입니다
+            imageOption = {offset: new kakao.maps.Point(27, 69)}; // 마커이미지의 옵션입니다. 마커의 좌표와 일치시킬 이미지 안에서의 좌표를 설정합니다.
+        
+        // 마커의 이미지정보를 가지고 있는 마커이미지를 생성합니다
+        var markerImage_green = new kakao.maps.MarkerImage(imageSrc_green, imageSize, imageOption),
+            markerImage_red = new kakao.maps.MarkerImage(imageSrc_red, imageSize, imageOption),
+            markerImage_orange = new kakao.maps.MarkerImage(imageSrc_orange, imageSize, imageOption),
+            markerImage_yellow = new kakao.maps.MarkerImage(imageSrc_yellow, imageSize, imageOption),
+            markerPosition1 = new kakao.maps.LatLng(36.352726 , 127.427220), // 마커가 표시될 위치입니다
+            markerPosition2 = new kakao.maps.LatLng(36.346018 , 127.447721), // 마커가 표시될 위치입니다
+            markerPosition3 = new kakao.maps.LatLng(36.337737 , 127.381534), // 마커가 표시될 위치입니다
+            markerPosition4 = new kakao.maps.LatLng(36.302728 , 127.367199); // 마커가 표시될 위치입니다
+        
+        // 마커를 생성합니다
+        var marker1 = new kakao.maps.Marker({
+          position: markerPosition1,
+        });
+        var marker2 = new kakao.maps.Marker({
+          position: markerPosition2,
+        });
+        var marker3 = new kakao.maps.Marker({
+          position: markerPosition3,
+        });
+        var marker4 = new kakao.maps.Marker({
+          position: markerPosition4, 
+        });
+         // 커스텀 오버레이가 표시될 위치입니다 
+        var overlayPosition1 = new kakao.maps.LatLng(36.352726 , 127.427270),
+            overlayPosition2 = new kakao.maps.LatLng(36.346018 , 127.447771),
+            overlayPosition3 = new kakao.maps.LatLng(36.337767 , 127.381584),
+            overlayPosition4 = new kakao.maps.LatLng(36.302728 , 127.367199);
+        
+        var customOverlay1 = new kakao.maps.CustomOverlay({
+            position: overlayPosition1})
+        var customOverlay2 = new kakao.maps.CustomOverlay({
+            position: overlayPosition2})
+        var customOverlay3 = new kakao.maps.CustomOverlay({
+            position: overlayPosition3})
+        var customOverlay4 = new kakao.maps.CustomOverlay({
+            position: overlayPosition4})
+        
+        // 경과시간을 표시해줄 오버레이
+        var count_overlayPosition1 = new kakao.maps.LatLng(36.352726 , 127.427320),
+            count_overlayPosition2 = new kakao.maps.LatLng(36.346018 , 127.447821),
+            count_overlayPosition3 = new kakao.maps.LatLng(36.337767 , 127.381634),
+            count_overlayPosition4 = new kakao.maps.LatLng(36.302728 , 127.367299);
+
+        var count_customOverlay1 = new kakao.maps.CustomOverlay({
+            position: count_overlayPosition1});
+        var count_customOverlay2 = new kakao.maps.CustomOverlay({
+            position: count_overlayPosition2});
+        var count_customOverlay3 = new kakao.maps.CustomOverlay({
+            position: count_overlayPosition3});
+        var count_customOverlay4 = new kakao.maps.CustomOverlay({
+            position: count_overlayPosition4});
+
+        // 마커가 지도 위에 표시되도록 설정합니다
+          
+        function markers(marker,length_f,customOverlay,cctv_name,cctv_adress,count_customOverlay,dis_start,dis_end){
+            // 커스텀 오버레이에 표출될 내용으로 HTML 문자열이나 document element가 가능합니다
+            var display_length = Math.round(length_f*100)/100
+            var content_green = '<div class="customoverlay">' +
+                '  <a style = "background: #3dcd44 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center" onclick = popup_video("'+cctv_name+'","'+cctv_adress+'")>' +
+                '    <span class="title">가용폭 : '+display_length+'cm</span>' +
+                '  </a>' +
+                '</div>';
+            var content_red = '<div class="customoverlay">' +
+                '  <a onclick = popup_video("'+cctv_name+'","'+cctv_adress+'")>' +
+                '    <span class="title">가용폭 : '+display_length+'cm</span>' +
+                '  </a>' +
+                '</div>';
+            var content_orange = '<div class="customoverlay">' +
+                '  <a style = "background: #eb8039 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center" onclick = popup_video("'+cctv_name+'","'+cctv_adress+'")>' +
+                '    <span class="title">가용폭 : '+display_length+'cm</span>' +
+                '  </a>' +
+                '</div>';
+            var content_yellow = '<div class="customoverlay">' +
+                '  <a style = "background: #eeec70 url(https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/arrow_white.png) no-repeat right 14px center" onclick = popup_video("'+cctv_name+'","'+cctv_adress+'")>' +
+                '    <span class="title">가용폭 : '+display_length+'cm</span>' +
+                '  </a>' +
+                '</div>';
+            // 커스텀 오버레이를 생성합니다
+            if (length_f > car_able){
+                if (typeof customOverlay === "undefined"){
+                    customOverlay.setContent(content_able);
+                    marker.setImage(markerImage_green)
+                    marker.setMap(map);
+                    customOverlay.setMap(map);               
+                }else{
+                    customOverlay.setMap(null);
+                    marker.setMap(null);
+                    count_customOverlay.setMap(null);
+                    marker.setImage(markerImage_green)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_green);
+                    customOverlay.setMap(map);
+                }
+            }else if (length_f == 0){
+                if (typeof customOverlay === "undefined"){
+                }else{
+                    marker.setMap(null);
+                    customOverlay.setMap(null);
+                    count_customOverlay.setMap(null);
+                }
+            }
+            else if (length_f > mid_able){
+                if (typeof customOverlay === "undefined"){
+                    marker.setImage(markerImage_yellow)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_yellow);
+                    customOverlay.setMap(map);
+                }else{
+                    customOverlay.setMap(null);
+                    marker.setMap(null);
+                    count_customOverlay.setMap(null);
+                    marker.setImage(markerImage_yellow)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_yellow);
+                    customOverlay.setMap(map);
+                    dis_end = new Date().getTime();
+                    dis_count = Math.round((dis_end-dis_start)/1000);
+                    count_customOverlay.setContent('<div class ="label"><span class="left"></span><span class="center">'+dis_count+'초 경과'+'</span><span class="right"></span></div>');
+                    count_customOverlay.setMap(map);
+                }
+            }
+            else if (length_f > small_able){
+                if (typeof customOverlay === "undefined"){
+                    marker.setImage(markerImage_orange)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_orange);
+                    customOverlay.setMap(map);
+                }else{
+                    customOverlay.setMap(null);
+                    marker.setMap(null);
+                    count_customOverlay.setMap(null);
+                    marker.setImage(markerImage_orange)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_orange);
+                    customOverlay.setMap(map);
+                    dis_end = new Date().getTime();
+                    dis_count = Math.round((dis_end-dis_start)/1000);
+                    count_customOverlay.setContent('<div class ="label"><span class="left"></span><span class="center">'+dis_count+'초 경과'+'</span><span class="right"></span></div>');
+                    count_customOverlay.setMap(map);
+                }
+            }
+            else{
+                if (typeof customOverlay === "undefined"){
+                    marker.setImage(markerImage_red)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_red);
+                    customOverlay.setMap(map);
+                }else{
+                    customOverlay.setMap(null);
+                    marker.setMap(null);
+                    count_customOverlay.setMap(null);
+                    marker.setImage(markerImage_red)
+                    marker.setMap(map);
+                    customOverlay.setContent(content_red);
+                    customOverlay.setMap(map);
+                    dis_end = new Date().getTime();
+                    dis_count = Math.round((dis_end-dis_start)/1000);
+                    count_customOverlay.setContent('<div class ="label"><span class="left"></span><span class="center">'+dis_count+'초 경과'+'</span><span class="right"></span></div>');
+                    count_customOverlay.setMap(map);
+                }
+            };
+            }
+            function dis_start_cal(length_f,customOverlay,dis_start){
+            
+            if (length_f > car_able){
+                if (typeof customOverlay === "undefined"){
+                    dis_start = new Date().getTime();
+                    return dis_start                
+                }else{
+                    dis_start = new Date().getTime();
+                    return dis_start
+                }
+            }else if (length_f == 0){
+                if (typeof customOverlay === "undefined"){
+                }else{
+                    dis_start = new Date().getTime();
+                    return dis_start
+                }
+            }
+            else if (length_f < car_able){
+                if (typeof customOverlay === "undefined"){
+                    dis_start = new Date().getTime();
+                    return dis_start
+                }else{
+                    return dis_start
+                }
+            };
+            }
+
+        function bignum_count(able_length1,able_length2,able_length3,able_length4){
+            let lengths = [able_length1,able_length2,able_length3,able_length4]
+            var big_count = 0
+            
+            for(let i of lengths){
+                if (i < car_able && i != 0){
+                    big_count += 1
+                }                
+            }
+            return big_count
+        }
+        function midnum_count(able_length1,able_length2,able_length3,able_length4){
+            let lengths = [able_length1,able_length2,able_length3,able_length4]
+            var mid_count = 0
+            
+            for(let i of lengths){
+                if(i < mid_able && i != 0){
+                    mid_count += 1
+                }
+            }
+            return mid_count
+        }
+        function smallnum_count(able_length1,able_length2,able_length3,able_length4){
+            let lengths = [able_length1,able_length2,able_length3,able_length4]
+            var small_count = 0
+            for(let i of lengths){
+                if(i < small_able && i != 0){
+                    small_count += 1
+                }
+                
+            }
+            return small_count
+        }
+        function sleep(ms) {
+            const wakeUpTime = Date.now() + ms;
+            while (Date.now() < wakeUpTime) {}
+        }
+        function cal_run(){
+            sleep(1500)
+            able_by_time1()
+            console.log(able_length1)
+            dis_start_1 = dis_start_cal(able_length1,customOverlay1,dis_start_1)
+            markers(marker1,able_length1,customOverlay1,"1-sample_cctv.mp4",cctv_1_adress,count_customOverlay1,dis_start_1,dis_end_1)
+            
+            sleep(1500)
+            able_by_time2()
+            console.log(able_length2)
+            dis_start_2 = dis_start_cal(able_length2,customOverlay2,dis_start_2)
+            markers(marker2,able_length2,customOverlay2,"2-sample_cctv.mp4",cctv_2_adress,count_customOverlay2,dis_start_2,dis_end_2)
+            
+            sleep(1500)
+            able_by_time3()
+            console.log(able_length3)
+            dis_start_3 = dis_start_cal(able_length3,customOverlay3,dis_start_3)
+            markers(marker3,able_length3,customOverlay3,"3-sample_cctv.mp4",cctv_3_adress,count_customOverlay3,dis_start_3,dis_end_3)
+            
+            sleep(1500)
+            able_by_time4()
+            console.log(able_length4)
+            dis_start_4 = dis_start_cal(able_length4,customOverlay4,dis_start_4)
+            markers(marker4,able_length4,customOverlay4,"4-sample_cctv.mp4",cctv_4_adress,count_customOverlay4,dis_start_4,dis_end_4)
+            
+            var small_count = smallnum_count(able_length1,able_length2,able_length3,able_length4)
+            var mid_count = midnum_count(able_length1,able_length2,able_length3,able_length4)
+            var big_count = bignum_count(able_length1,able_length2,able_length3,able_length4)
+            
+            document.getElementById("small_disable").innerText = "가용폭 2.5M 미만 : "+small_count+"곳"
+            document.getElementById("middle_disable").innerText = "가용폭 3M 미만 : "+mid_count+"곳"
+            document.getElementById("big_disable").innerText = "가용폭 3.5M 미만 : "+big_count+"곳"
+        }
+        var able_length1 = 0
+        var able_length2 = 0
+        var able_length3 = 0
+        var able_length4 = 0
+        var dis_start_1 = 0
+        var dis_end_1 = 0
+        var dis_start_2 = 0
+        var dis_end_2 = 0
+        var dis_start_3 = 0
+        var dis_end_3 = 0
+        var dis_start_4 = 0
+        var dis_end_4 = 0
+
+        setInterval(() => cal_run(), 15000);
+
+    </script>
+    
+</body>
+</html>

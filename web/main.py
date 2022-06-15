@@ -8,7 +8,6 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
-model = torch.hub.load('ultralytics/yolov5', 'yolov5l')  # 미리 학습된 COCO based weight 모델 사용
 model2 = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', autoshape=True) # warping 후 왜곡된 차량에 대해 학습한 weight 모델 사용
 
 threshold = 0.1
@@ -77,7 +76,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return render_template("index_수정보완필요.html")
+    return render_template("index_v4.html")
 
 @app.route("/get")
 def able_cal():
