@@ -1,0 +1,8 @@
+drive : https://drive.google.com/drive/folders/1SAvwWQo9rhWj24GgPXQdli9fVuvNVAni?usp=sharing
+
+1. 코드를 다운받은 뒤 requirement안의 내용을 설치합니다.
+2. 드라이브에서 cctv 영상데이터 4개를 모두 다운받아 web의 static안에 넣어둡니다.
+3. 드라이브에서 yolov5_custom.pt를 다운받아 web의 dataset안에 넣어둡니다.
+4. index_v4.html의 116줄에 appkey를 kakao developers에서 발급받은 JavaScript 자신의 앱키로 바꾸어줍니다.
+5. kakao developers의 플랫폼의 Web에 run.py로 실행했을시의 웹페이지 주소를 넣어줍니다.
+6. web의 run.py를 실행하여 줍니다.
