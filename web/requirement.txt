@@ -1,0 +1,8 @@
+!pip install flask
+!pip install cv2
+!pip install os
+!pip install torch
+!pip install yaml
+!pip install PIL
+!pip install numpy
+!pip install pandas

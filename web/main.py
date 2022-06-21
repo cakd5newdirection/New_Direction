@@ -8,12 +8,12 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
-model2 = torch.hub.load('ultralytics/yolov5', 'custom', path='./best.pt', autoshape=True) # warping 후 왜곡된 차량에 대해 학습한 weight 모델 사용
+model2 = torch.hub.load('ultralytics/yolov5', 'custom', path='.\dataset\yolov5_custom.pt', autoshape=True) # warping 후 왜곡된 차량에 대해 학습한 weight 모델 사용
 
 # 오차율설정
 threshold = 0.1
 # 차선의 실제 넓이 설정(현재는 모든 차선이 15cm로 동일해서 미리 선언)
-line_width = 15
+# line_width = 15
 
 # 좌표 중심점을 담을 빈 리스트 생성
 # 각 cctv별로 비교를 통해 이동여부를 판단하기에 cctv별로 리스트 생성
@@ -93,7 +93,7 @@ def home():
 def able_cal():
     global cap,threshold,line_pixel,w1_mid,w1_mid2,w1_mid3,able_length,w2_mid,w2_mid2,w2_mid3,w3_mid,w3_mid2,w3_mid3,w4_mid,w4_mid2,w4_mid3
     # 웹에서 받아온 파일이름으로 영상 데이터 load
-    path = '../web/static'
+    path = './static'
     file_name = request.args.get('file_name').strip()
     print(file_name)
     filePath = os.path.join(path, file_name)
@@ -101,7 +101,7 @@ def able_cal():
 
     # cctv에 대한 사전 정보 load
     cctv_num = int(file_name[0])
-    cctv_pre = pd.read_csv('../cctv_pre.csv',index_col=0,encoding='cp949')
+    cctv_pre = pd.read_csv('./dataset/cctv_pre.csv',index_col=0,encoding='cp949')
     coor_df = cctv_pre[cctv_pre.cctv_num == cctv_num]
     line_pixel = coor_df['line_pixel'].values[0]
     line_width = coor_df['line_length'].values[0]
@@ -193,6 +193,7 @@ def able_cal():
 
             # 왼쪽과 오른쪽 모두에 차량이 존재할 경우
             if (left != [])&(right != []):
+                able = []
                 for i in left:
                     for j in right:
                         # 차량이 겹쳐 있다면 able에 두 차량 사이의 픽셀값을 저장
@@ -200,15 +201,19 @@ def able_cal():
                             able.append(j[0]-i[2])
                         elif (i[1]>j[3]) & (i[3]<j[1]):
                             able.append(j[0]-i[2])
-                        # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
-                        able.append(img_size[1]-i[2])
-                        # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
-                        able.append(j[0])
-                x_length = min(able)
+                if able != []:
+                    x_length = min(able)
+                else:
+                    # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
+                    for i in range(len(left)):
+                        able.append(img_size[1] - left[i][2])
+                    # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
+                    for i in range(len(right)):
+                        able.append(right[i][0])
+                    x_length = min(able)
 
             # 왼쪽과 오른쪽중 한곳에만 챠량이 존재하거나 차량이 없을경우
             else:
-                able = []
                 # 차량이 없을 경우에는 이미지의 사이즈가 가용폭
                 if (left == [])&(right == []):
                     able.append(img_size[1])
@@ -237,7 +242,6 @@ def able_cal():
         if w1_mid3 != []:
             left = []
             right = []
-            cross = []
             print('-'*30)
             df['xmid'] = np.NaN
             for i in range(len(df)):
@@ -252,18 +256,25 @@ def able_cal():
                     left.append(df.loc[df['xmid']==i].values.tolist()[0])
             # 왼쪽과 오른쪽 모두에 차량이 존재할 경우
             if (left != [])&(right != []):
+                able = []
                 for i in left:
                     for j in right:
-                        # 차량이 겹쳐 있다면 cross에 두 차량 사이의 픽셀값을 저장
+                        # 차량이 겹쳐 있다면 able에 두 차량 사이의 픽셀값을 저장
                         if (i[3]>j[1]) & (i[1]<j[3]):
                             able.append(j[0]-i[2])
                         elif (i[1]>j[3]) & (i[3]<j[1]):
                             able.append(j[0]-i[2])
-                        # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
-                        able.append(img_size[1]-i[2])
-                        # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
-                        able.append(j[0])
-                x_length = min(able)
+                if able != []:
+                    x_length = min(able)
+                else:
+                    able = []
+                    # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
+                    for i in range(len(left)):
+                        able.append(img_size[1] - left[i][2])
+                    # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
+                    for i in range(len(right)):
+                        able.append(right[i][0])
+                    x_length = min(able)
             else:
                 able = []
                 if left != []:
@@ -283,7 +294,6 @@ def able_cal():
         if w1_mid3 != []:
             left = []
             right = []
-            cross = []
             print('-'*30)
             df['xmid'] = np.NaN
             for i in range(len(df)):
@@ -298,18 +308,25 @@ def able_cal():
                     left.append(df.loc[df['xmid']==i].values.tolist()[0])
             # 왼쪽과 오른쪽 모두에 차량이 존재할 경우
             if (left != [])&(right != []):
+                able = []
                 for i in left:
                     for j in right:
-                        # 차량이 겹쳐 있다면 cross에 두 차량 사이의 픽셀값을 저장
+                        # 차량이 겹쳐 있다면 able에 두 차량 사이의 픽셀값을 저장
                         if (i[3]>j[1]) & (i[1]<j[3]):
                             able.append(j[0]-i[2])
                         elif (i[1]>j[3]) & (i[3]<j[1]):
                             able.append(j[0]-i[2])
-                        # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
-                        able.append(img_size[1]-i[2])
-                        # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
-                        able.append(j[0])
-                x_length = min(able)
+                if able != []:
+                    x_length = min(able)
+                else:
+                    able = []
+                    # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
+                    for i in range(len(left)):
+                        able.append(img_size[1] - left[i][2])
+                    # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
+                    for i in range(len(right)):
+                        able.append(right[i][0])
+                    x_length = min(able)
             else:
                 able = []
                 if left != []:
@@ -329,7 +346,6 @@ def able_cal():
         if w4_mid3 != []:
             left = []
             right = []
-            cross = []
             print('-'*30)
             df['xmid'] = np.NaN
             for i in range(len(df)):
@@ -344,18 +360,25 @@ def able_cal():
                     left.append(df.loc[df['xmid']==i].values.tolist()[0])
             # 왼쪽과 오른쪽 모두에 차량이 존재할 경우
             if (left != [])&(right != []):
+                able = []
                 for i in left:
                     for j in right:
-                        # 차량이 겹쳐 있다면 cross에 두 차량 사이의 픽셀값을 저장
+                        # 차량이 겹쳐 있다면 able에 두 차량 사이의 픽셀값을 저장
                         if (i[3]>j[1]) & (i[1]<j[3]):
                             able.append(j[0]-i[2])
                         elif (i[1]>j[3]) & (i[3]<j[1]):
                             able.append(j[0]-i[2])
-                        # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
-                        able.append(img_size[1]-i[2])
-                        # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
-                        able.append(j[0])
-                x_length = min(able)
+                if able != []:
+                    x_length = min(able)
+                else:
+                    able = []
+                    # 왼쪽에 있는 차량의 경우 가용폭은 (이미지의 x축 길이 - 차량의 최대 x좌표)
+                    for i in range(len(left)):
+                        able.append(img_size[1] - left[i][2])
+                    # 오른쪽에 있는 차량의 경우 가용폭은 (차량의 최소 x좌표)
+                    for i in range(len(right)):
+                        able.append(right[i][0])
+                    x_length = min(able)
             else:
                 able = []
                 if left != []:
